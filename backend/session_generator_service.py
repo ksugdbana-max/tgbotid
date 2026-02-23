@@ -190,7 +190,8 @@ class SessionGeneratorService:
 _session_generator = None
 
 def get_session_generator():
-    """Get or create global session generator instance"""
+    """Get or create global session generator instance.
+    Reads credentials from env vars or database settings."""
     global _session_generator
     if _session_generator is None:
         import os
@@ -198,3 +199,27 @@ def get_session_generator():
         api_hash = os.getenv("TELEGRAM_API_HASH", "")
         _session_generator = SessionGeneratorService(api_id, api_hash)
     return _session_generator
+
+async def get_session_generator_async():
+    """Get session generator, refreshing credentials from DB if needed."""
+    import os
+    try:
+        from .database import async_session
+        from sqlalchemy import select
+        from .models import Settings
+        async with async_session() as session:
+            api_id_res = await session.execute(select(Settings).where(Settings.key == "telegram_api_id"))
+            api_hash_res = await session.execute(select(Settings).where(Settings.key == "telegram_api_hash"))
+            api_id_setting = api_id_res.scalar_one_or_none()
+            api_hash_setting = api_hash_res.scalar_one_or_none()
+            db_api_id = api_id_setting.value if api_id_setting else None
+            db_api_hash = api_hash_setting.value if api_hash_setting else None
+            if db_api_id:
+                os.environ["TELEGRAM_API_ID"] = db_api_id
+            if db_api_hash:
+                os.environ["TELEGRAM_API_HASH"] = db_api_hash
+    except Exception:
+        pass
+    api_id = int(os.getenv("TELEGRAM_API_ID", 0))
+    api_hash = os.getenv("TELEGRAM_API_HASH", "")
+    return SessionGeneratorService(api_id, api_hash)

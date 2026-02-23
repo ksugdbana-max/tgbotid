@@ -11,6 +11,10 @@ const PaymentSettings = () => {
     const [ownerUsername, setOwnerUsername] = useState('');
     const [exchangeRate, setExchangeRate] = useState(84.0);
     const [settings, setSettings] = useState({ bot_channel_link: '', bot_owner_username: '' });
+    const [apiId, setApiId] = useState('');
+    const [apiHash, setApiHash] = useState('');
+    const [apiSaving, setApiSaving] = useState(false);
+    const [apiMessage, setApiMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [showRedeployModal, setShowRedeployModal] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -47,11 +51,40 @@ const PaymentSettings = () => {
                 console.error("Error fetching exchange rate:", err);
             }
 
+            // Fetch Telegram API credentials
+            try {
+                const apiRes = await axios.get(`${API_BASE}/admin/settings/telegram-api`);
+                setApiId(apiRes.data.api_id || '');
+                setApiHash(apiRes.data.api_hash || '');
+            } catch (err) {
+                console.error("Error fetching API credentials:", err);
+            }
+
             setLoading(false);
         } catch (error) {
             console.error("Error fetching settings:", error);
             setMessage("Failed to load settings.");
             setLoading(false);
+        }
+    };
+
+    const handleSaveApiCredentials = async () => {
+        if (!apiId || !apiHash) {
+            setApiMessage('❌ Both API ID and API Hash are required.');
+            return;
+        }
+        setApiSaving(true);
+        setApiMessage('');
+        try {
+            await axios.post(`${API_BASE}/admin/settings/telegram-api`, {
+                api_id: apiId.trim(),
+                api_hash: apiHash.trim()
+            });
+            setApiMessage('✅ Telegram API credentials saved! Session generation will now work.');
+        } catch (error) {
+            setApiMessage(`❌ ${error.response?.data?.detail || 'Failed to save credentials.'}`);
+        } finally {
+            setApiSaving(false);
         }
     };
 
@@ -321,6 +354,59 @@ const PaymentSettings = () => {
                     )}
 
                 </form>
+            </div>
+
+            {/* Telegram API Credentials Section */}
+            <div className="mt-8 bg-slate-800 rounded-xl p-6 border border-slate-700">
+                <h3 className="text-xl font-bold text-white mb-2">🔑 Telegram API Credentials</h3>
+                <p className="text-slate-400 text-sm mb-6">
+                    Required for session generation (auto-login accounts). Get these from{' '}
+                    <a href="https://my.telegram.org" target="_blank" rel="noopener noreferrer" className="text-purple-400 underline hover:text-purple-300">my.telegram.org</a>
+                    {' '}→ API development tools.
+                </p>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-slate-400 text-sm font-medium mb-2">API ID</label>
+                        <input
+                            type="text"
+                            value={apiId}
+                            onChange={(e) => setApiId(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                            placeholder="e.g. 12345678"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-slate-400 text-sm font-medium mb-2">API Hash</label>
+                        <input
+                            type="password"
+                            value={apiHash}
+                            onChange={(e) => setApiHash(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                            placeholder="32-character hash string"
+                        />
+                    </div>
+                </div>
+
+                <button
+                    onClick={handleSaveApiCredentials}
+                    disabled={apiSaving}
+                    className={`mt-4 w-full py-3 rounded-lg font-bold text-lg transition-all ${apiSaving
+                        ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-900/50'
+                        }`}
+                >
+                    {apiSaving ? 'Saving...' : '💾 Save API Credentials'}
+                </button>
+
+                {apiMessage && (
+                    <div className={`mt-4 p-4 rounded-lg text-center font-medium ${apiMessage.includes('✅')
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                        {apiMessage}
+                    </div>
+                )}
             </div>
 
             {/* Webhook Fix Section */}

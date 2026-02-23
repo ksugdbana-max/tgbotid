@@ -8,7 +8,7 @@ from .bot import bot, dp
 from .models import User, Country, Account, Purchase, Deposit, Settings
 from aiogram.types import Update
 from .session_manager import get_session_manager
-from .session_generator_service import get_session_generator
+from .session_generator_service import get_session_generator, get_session_generator_async
 from sqlalchemy import select, update, delete
 from pydantic import BaseModel
 from typing import List, Optional
@@ -778,7 +778,7 @@ class SessionVerify2FARequest(BaseModel):
 async def start_session_generation(req: SessionStartRequest):
     """Start Telegram login and send OTP"""
     try:
-        generator = get_session_generator()
+        generator = await get_session_generator_async()
         result = await generator.start_login(req.phone_number)
         return result
     except Exception as e:
@@ -788,7 +788,7 @@ async def start_session_generation(req: SessionStartRequest):
 async def verify_session_otp(req: SessionVerifyOTPRequest):
     """Verify OTP code and check for 2FA"""
     try:
-        generator = get_session_generator()
+        generator = await get_session_generator_async()
         result = await generator.verify_otp(
             session_id=req.session_id,
             phone_number=req.phone_number,
@@ -802,7 +802,7 @@ async def verify_session_otp(req: SessionVerifyOTPRequest):
 async def verify_session_2fa(req: SessionVerify2FARequest):
     """Verify 2FA password"""
     try:
-        generator = get_session_generator()
+        generator = await get_session_generator_async()
         result = await generator.verify_2fa(req.session_id, req.password)
         return result
     except Exception as e:
@@ -958,6 +958,45 @@ async def update_payment_settings(
     except Exception as e:
         print(f"Error updating settings: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/admin/settings/telegram-api")
+async def get_telegram_api_settings():
+    """Get stored TELEGRAM_API_ID and TELEGRAM_API_HASH from database"""
+    async with async_session() as session:
+        api_id_stmt = select(Settings).where(Settings.key == "telegram_api_id")
+        api_hash_stmt = select(Settings).where(Settings.key == "telegram_api_hash")
+        api_id_res = await session.execute(api_id_stmt)
+        api_hash_res = await session.execute(api_hash_stmt)
+        api_id_setting = api_id_res.scalar_one_or_none()
+        api_hash_setting = api_hash_res.scalar_one_or_none()
+        return {
+            "api_id": api_id_setting.value if api_id_setting else os.getenv("TELEGRAM_API_ID", ""),
+            "api_hash": api_hash_setting.value if api_hash_setting else os.getenv("TELEGRAM_API_HASH", "")
+        }
+
+class TelegramApiCredentials(BaseModel):
+    api_id: str
+    api_hash: str
+
+@app.post("/admin/settings/telegram-api")
+async def set_telegram_api_settings(data: TelegramApiCredentials):
+    """Save TELEGRAM_API_ID and TELEGRAM_API_HASH to database"""
+    if not data.api_id or not data.api_hash:
+        raise HTTPException(status_code=400, detail="Both API ID and API Hash are required")
+    async with async_session() as session:
+        for key, value in [("telegram_api_id", data.api_id), ("telegram_api_hash", data.api_hash)]:
+            stmt = select(Settings).where(Settings.key == key)
+            res = await session.execute(stmt)
+            setting = res.scalar_one_or_none()
+            if setting:
+                setting.value = value
+            else:
+                session.add(Settings(key=key, value=value))
+        await session.commit()
+    os.environ["TELEGRAM_API_ID"] = data.api_id
+    os.environ["TELEGRAM_API_HASH"] = data.api_hash
+    logger.info(f"✅ Telegram API credentials updated via admin panel")
+    return {"success": True, "message": "Telegram API credentials saved successfully"}
 
 @app.get("/admin/deposits/enhanced")
 async def get_deposits_enhanced():
