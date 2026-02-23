@@ -1,39 +1,44 @@
+# Stage 1: Build the React frontend
+FROM node:20-slim AS frontend-builder
+
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Python runtime (no Node.js = smaller, less memory)
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies + Node.js for frontend build
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
-    curl \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Copy full project
-COPY . .
+# Copy backend
+COPY backend/ backend/
 
-# Build the React frontend
-WORKDIR /app/frontend
-RUN npm install
-RUN npm run build
+# Copy ONLY the built frontend dist (no node_modules)
+COPY --from=frontend-builder /app/frontend/dist/ frontend/dist/
 
-# Return to app root
-WORKDIR /app
+# Create uploads dir
+RUN mkdir -p uploads
 
-# Expose port
-EXPOSE 7860
+# Expose Railway's default port
+EXPOSE 8080
 
-# Start FastAPI (which serves the built frontend from /frontend/dist)
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "backend.main:app", \
-     "--bind", "0.0.0.0:7860", \
-     "--workers", "1", \
-     "--timeout", "120", \
-     "--graceful-timeout", "30", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info"]
+# Use shell form so $PORT env var is expanded by Railway
+CMD gunicorn -k uvicorn.workers.UvicornWorker backend.main:app \
+    --bind 0.0.0.0:${PORT:-8080} \
+    --workers 1 \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info

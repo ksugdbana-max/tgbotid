@@ -112,7 +112,7 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.get("/health")
 async def health_check():
     return {"status": "ok", "mode": "webhook", "service": "Telegram Bot Backend"}
 
