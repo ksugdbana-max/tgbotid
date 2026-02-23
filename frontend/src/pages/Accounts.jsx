@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Search, Package, Loader2, Check, X, AlertCircle } from 'lucide-react';
 import SessionGeneratorModal from '../components/SessionGeneratorModal';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://welldecked-deflected-daniella.ngrok-free.dev';
+import { API_BASE } from '../api_config';
 
 // Phone prefix to country mapping
 const PHONE_COUNTRY_MAP = {

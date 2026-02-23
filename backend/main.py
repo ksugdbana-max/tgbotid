@@ -97,6 +97,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Add CORS Middleware to allow Vercel frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For production, you could list your Vercel URL specifically
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/")
 async def health_check():

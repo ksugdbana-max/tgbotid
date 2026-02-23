@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { API_BASE } from '../api_config';
 
 const PaymentSettings = () => {
     const [upiId, setUpiId] = useState('');
@@ -17,8 +15,6 @@ const PaymentSettings = () => {
     const [webhookFixing, setWebhookFixing] = useState(false);
     const [webhookMessage, setWebhookMessage] = useState('');
     const navigate = useNavigate();
-
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
     useEffect(() => {
         fetchSettings();

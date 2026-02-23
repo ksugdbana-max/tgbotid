@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, CreditCard, ShoppingBag, Clock } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://welldecked-deflected-daniella.ngrok-free.dev';
+import { API_BASE } from '../api_config';
 
 const UserDetails = () => {
     const { id } = useParams();

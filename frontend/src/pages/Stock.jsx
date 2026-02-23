@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, Filter, CheckCircle, XCircle, Package } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://welldecked-deflected-daniella.ngrok-free.dev';
+import { API_BASE } from '../api_config';
 
 const Stock = () => {
     const [accounts, setAccounts] = useState([]);

@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { User, ChevronRight, Search, DollarSign, X } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://welldecked-deflected-daniella.ngrok-free.dev';
+import { API_BASE } from '../api_config';
 
 const Users = () => {
     const [users, setUsers] = useState([]);
@@ -165,8 +165,8 @@ const Users = () => {
                                     <button
                                         onClick={() => setAdjustType('admin_add')}
                                         className={`py-2 px-4 rounded-lg font-medium transition-all ${adjustType === 'admin_add'
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             }`}
                                     >
                                         Add Points
@@ -174,8 +174,8 @@ const Users = () => {
                                     <button
                                         onClick={() => setAdjustType('admin_deduct')}
                                         className={`py-2 px-4 rounded-lg font-medium transition-all ${adjustType === 'admin_deduct'
-                                                ? 'bg-red-500 text-white'
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            ? 'bg-red-500 text-white'
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                             }`}
                                     >
                                         Deduct Points
