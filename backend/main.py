@@ -104,10 +104,12 @@ app = FastAPI(lifespan=lifespan)
 
 # Add CORS Middleware to allow Vercel frontend access
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+allow_all = "*" in allowed_origins
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=not allow_all,
     allow_methods=["*"],
     allow_headers=["*"],
 )
