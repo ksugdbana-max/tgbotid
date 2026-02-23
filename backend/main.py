@@ -232,14 +232,7 @@ async def detailed_health():
     
     return health_status
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Removed duplicate middleware - handled at top level
 
 # Add timeout middleware for request protection
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -281,45 +274,20 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
 app.add_middleware(TimeoutMiddleware)
 
 
-# Webhook Handler
-from aiogram.types import Update
+# Removed duplicate webhook - handled at line 117
 
-@app.post(WEBHOOK_PATH)
-@app.post(WEBHOOK_PATH)
-async def bot_webhook(update: dict):
-    """
-    Handler for Telegram Webhook updates
-    """
-    print(f"📥 Received Webhook Update: {update}")
-    try:
-        # Convert dict to aiogram Update object manually to debug validation errors
-        aiogram_update = Update(**update)
-        return await dp.feed_update(bot, aiogram_update)
-    except Exception as e:
-        print(f"❌ Error processing webhook: {e}")
-        # Return 200 OK anyway to stop Telegram from retrying endlessly
-        return {"status": "error", "message": str(e)}
-
-# Add CORS middleware to allow frontend dev server
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Removed duplicate middleware - handled at top level
 
 # Admin API and Frontend serving below
 
 @app.post("/api/login")
 async def login(request: LoginRequest):
-    """Admin login endpoint - reads password from ADMIN_PASSWORD env var"""
+    """Admin login endpoint - reads password from ADMIN_PASSWORD or ADMIN_TOKEN env var"""
     try:
-        # Get admin password from environment variable
-        admin_password = os.getenv("ADMIN_PASSWORD", "admin123")  # Default fallback
+        # Get admin password from environment variable (support both names)
+        admin_password = os.getenv("ADMIN_PASSWORD") or os.getenv("ADMIN_TOKEN") or "admin123"
         
-        logger.info(f"🔐 Login attempt with password: {request.password[:3]}***")
-        logger.info(f"🔐 Expected password from env: {admin_password[:3]}***")
+        logger.info(f"🔐 Login attempt received.")
         
         # Check password
         if request.password == admin_password:
