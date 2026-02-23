@@ -353,13 +353,39 @@ class TelegramSessionManager:
 # Global session manager instance
 _session_manager = None
 
-def get_session_manager():
-    """Get or create global session manager instance"""
+async def get_session_manager_async():
+    """Get the global session manager, refreshing credentials from DB if needed.
+    IMPORTANT: always returns the same singleton so active_clients is preserved."""
     global _session_manager
+    # Try to update credentials from DB
+    import os
+    try:
+        from .database import async_session
+        from sqlalchemy import select
+        from .models import Settings
+        async with async_session() as session:
+            api_id_res = await session.execute(select(Settings).where(Settings.key == "telegram_api_id"))
+            api_hash_res = await session.execute(select(Settings).where(Settings.key == "telegram_api_hash"))
+            api_id_setting = api_id_res.scalar_one_or_none()
+            api_hash_setting = api_hash_res.scalar_one_or_none()
+            if api_id_setting:
+                os.environ["TELEGRAM_API_ID"] = api_id_setting.value
+            if api_hash_setting:
+                os.environ["TELEGRAM_API_HASH"] = api_hash_setting.value
+    except Exception:
+        pass  # Fall back to env vars
+
+    api_id = int(os.getenv("TELEGRAM_API_ID", 0))
+    api_hash = os.getenv("TELEGRAM_API_HASH", "")
+
     if _session_manager is None:
-        api_id = int(os.getenv("TELEGRAM_API_ID", 0))
-        api_hash = os.getenv("TELEGRAM_API_HASH", "")
+        # First time: create the singleton
         if not api_id or not api_hash:
-            raise ValueError("TELEGRAM_API_ID and TELEGRAM_API_HASH must be set in environment")
+            raise ValueError("TELEGRAM_API_ID and TELEGRAM_API_HASH must be set in database or environment")
         _session_manager = TelegramSessionManager(api_id, api_hash)
+    else:
+        # Update credentials in-place without losing active_clients
+        _session_manager.api_id = api_id
+        _session_manager.api_hash = api_hash
+
     return _session_manager

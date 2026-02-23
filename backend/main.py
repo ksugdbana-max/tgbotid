@@ -7,7 +7,7 @@ from .database import init_db, async_session
 from .bot import bot, dp
 from .models import User, Country, Account, Purchase, Deposit, Settings
 from aiogram.types import Update
-from .session_manager import get_session_manager
+from .session_manager import get_session_manager_async
 from .session_generator_service import get_session_generator, get_session_generator_async
 from sqlalchemy import select, update, delete
 from pydantic import BaseModel
@@ -739,7 +739,7 @@ async def test_session(account_id: int):
             }
         
         try:
-            session_mgr = get_session_manager()
+            session_mgr = await get_session_manager_async()
             result = await session_mgr.test_session(
                 phone_number=account.phone_number,
                 session_string=account.session_data
@@ -779,7 +779,7 @@ async def start_otp_monitoring(account_id: int):
             raise HTTPException(status_code=400, detail="No session data available")
         
         try:
-            session_mgr = get_session_manager()
+            session_mgr = await get_session_manager_async()
             await session_mgr.start_monitoring(
                 phone_number=account.phone_number,
                 session_string=account.session_data
@@ -800,7 +800,7 @@ async def stop_otp_monitoring(account_id: int):
             raise HTTPException(status_code=404, detail="Account not found")
         
         try:
-            session_mgr = get_session_manager()
+            session_mgr = await get_session_manager_async()
             await session_mgr.stop_monitoring(account.phone_number)
             return {"success": True, "message": "Monitoring stopped"}
         except Exception as e:
@@ -810,7 +810,7 @@ async def stop_otp_monitoring(account_id: int):
 async def get_live_otp_codes():
     """Get all active OTP monitoring sessions and recent codes"""
     try:
-        session_mgr = get_session_manager()
+        session_mgr = await get_session_manager_async()
         active_phones = session_mgr.get_all_active_phones()
         
         # Get recent OTPs (last 5 minutes)

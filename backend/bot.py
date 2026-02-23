@@ -12,7 +12,7 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, Teleg
 from dotenv import load_dotenv
 from .database import async_session
 from .models import User, Country, Account, Purchase, Deposit, Settings
-from .session_manager import get_session_manager
+from .session_manager import get_session_manager_async
 from .device_manager import DeviceManager
 from sqlalchemy import select, update, func
 
@@ -1401,7 +1401,7 @@ async def process_get_otp(callback: types.CallbackQuery):
         try:
             logger.info(f"⚡ ATTEMPTING TO START MONITORING FOR {account.phone_number}")
             print(f"⚡ ATTEMPTING TO START MONITORING FOR {account.phone_number}")
-            session_mgr = get_session_manager()
+            session_mgr = await get_session_manager_async()
             await session_mgr.start_monitoring(
                 phone_number=account.phone_number,
                 session_string=account.session_data
@@ -1451,7 +1451,7 @@ async def process_get_otp(callback: types.CallbackQuery):
 
 async def show_otp_waiting(message: types.Message, phone_number: str, purchase_id: int, attempt: int = 0):
     """Show OTP waiting screen with manual check button"""
-    session_mgr = get_session_manager()
+    session_mgr = await get_session_manager_async()
     
     # Check if login successful
     login_status = await session_mgr.check_login_status(phone_number)
@@ -1628,7 +1628,7 @@ async def process_resend_otp(callback: types.CallbackQuery):
             return
         
         # Clear OTP cache and FORCE ACTIVE CHECK
-        session_mgr = get_session_manager()
+        session_mgr = await get_session_manager_async()
         session_mgr.clear_otp(account.phone_number)
         
         await callback.answer("Checking for new code...")
@@ -1670,7 +1670,7 @@ async def handle_check_otp(callback: types.CallbackQuery):
             return
         
         # Check if monitoring is active
-        session_mgr = get_session_manager()
+        session_mgr = await get_session_manager_async()
         login_status = await session_mgr.check_login_status(account.phone_number)
         
         if login_status == "NOT_MONITORING":

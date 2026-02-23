@@ -132,7 +132,7 @@ async def process_get_otp(callback: types.CallbackQuery):
         
         # Start monitoring
         try:
-            session_mgr = get_session_manager()
+            session_mgr = await get_session_manager_async()
             await session_mgr.start_monitoring(
                 phone_number=account.phone_number,
                 session_string=account.session_data
@@ -156,7 +156,7 @@ async def process_get_otp(callback: types.CallbackQuery):
 
 async def show_otp_waiting(message, phone_number, purchase_id, attempt=0):
     """Auto-refreshing OTP display with login detection"""
-    session_mgr = get_session_manager()
+    session_mgr = await get_session_manager_async()
     
     # Check if login successful
     login_status = await session_mgr.check_login_status(phone_number)
@@ -254,7 +254,7 @@ async def process_resend_otp(callback: types.CallbackQuery):
             return
         
         # Clear OTP cache and restart monitoring
-        session_mgr = get_session_manager()
+        session_mgr = await get_session_manager_async()
         session_mgr.clear_otp(account.phone_number)
         
         await callback.message.edit_text(
