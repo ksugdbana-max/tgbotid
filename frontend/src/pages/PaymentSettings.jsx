@@ -9,6 +9,7 @@ const PaymentSettings = () => {
     const [qrPreview, setQrPreview] = useState(''); // URL for preview
     const [channelLink, setChannelLink] = useState('');
     const [logChannelId, setLogChannelId] = useState('');
+    const [botChannelId, setBotChannelId] = useState('');
     const [ownerUsername, setOwnerUsername] = useState('');
     const [exchangeRate, setExchangeRate] = useState(84.0);
     const [settings, setSettings] = useState({ bot_channel_link: '', bot_owner_username: '' });
@@ -42,6 +43,7 @@ const PaymentSettings = () => {
             setChannelLink(response.data.channel_link || '');
             setOwnerUsername(response.data.owner_username || '');
             setLogChannelId(response.data.log_channel_id || '');
+            setBotChannelId(response.data.bot_channel_id || '');
 
             // Fetch exchange rate
             try {
@@ -123,6 +125,15 @@ const PaymentSettings = () => {
             }
         }
 
+        // Validate bot channel ID (should be numeric or -100...)
+        if (botChannelId && botChannelId.trim()) {
+            if (!/^-?\d+$/.test(botChannelId.trim())) {
+                setMessage('❌ Private Channel ID must be numbers only (e.g. -100123456789)');
+                setSaving(false);
+                return;
+            }
+        }
+
         // Validate owner username
         if (ownerUsername && ownerUsername.trim()) {
             const ownerLower = ownerUsername.toLowerCase();
@@ -148,6 +159,9 @@ const PaymentSettings = () => {
         }
         if (logChannelId && logChannelId.trim()) {
             formData.append('log_channel_id', logChannelId.trim());
+        }
+        if (botChannelId && botChannelId.trim()) {
+            formData.append('bot_channel_id', botChannelId.trim());
         }
         if (qrImage) {
             formData.append('qr_image', qrImage);
@@ -320,6 +334,23 @@ const PaymentSettings = () => {
                                 />
                                 <p className="text-xs text-slate-500 mt-2">
                                     This is where the bot will send automated purchase logs. (Make sure the bot is an admin in this channel).
+                                </p>
+                            </div>
+
+                            {/* Private Channel ID */}
+                            <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                                <label className="block text-slate-400 text-sm font-medium mb-2">
+                                    Private Channel ID (For Force Join) <span className="text-yellow-500">*Optional</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={botChannelId}
+                                    onChange={(e) => setBotChannelId(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                                    placeholder="e.g. -100123456789"
+                                />
+                                <p className="text-xs text-slate-500 mt-2">
+                                    If your "Channel Link" above is a <b>private invite link</b> (like <code>t.me/+AbCdE</code>), the bot cannot check membership with it. You <b>must</b> enter the numeric Chat ID here (starts with <code>-100</code>). Use <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="text-blue-400 underline">@userinfobot</a> to find it.
                                 </p>
                             </div>
                         </div>

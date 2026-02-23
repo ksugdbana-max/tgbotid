@@ -145,24 +145,33 @@ async def check_channel_membership(user_id: int) -> bool:
             
             if not setting or not setting.value or not str(setting.value).strip():
                 return True  # No channel configured
-            
-            channel_username = str(setting.value).strip()
-            
-            # If it's a private invite link (e.g. t.me/+... or t.me/joinchat/...)
-            # bot.get_chat_member() CANNOT work with an invite hash.
-            # It requires the numeric Chat ID (-100...) or public @username.
-            if "/+" in channel_username or "joinchat" in channel_username:
-                logger.warning(f"⚠️ Cannot check membership for PRIVATE invite link: {channel_username}. "
-                               f"Admin must use public @username or configure a numeric Chat ID. Bypassing check.")
-                return True
                 
-            if "t.me/" in channel_username:
-                channel_username = channel_username.split("t.me/")[-1]
-            if not channel_username.startswith("@") and not channel_username.startswith("-100"):
-                channel_username = f"@{channel_username}"
+            bot_channel_id_setting = await session.execute(
+                select(Settings).where(Settings.key == "bot_channel_id")
+            )
+            bot_id_setting = bot_channel_id_setting.scalar_one_or_none()
+            
+            # Use Numeric Chat ID if provided (Required for Private Channels)
+            if bot_id_setting and bot_id_setting.value and str(bot_id_setting.value).strip():
+                chat_id_to_check = str(bot_id_setting.value).strip()
+            else:
+                # Fall back to parsing the invite link for Public Channels
+                channel_username = str(setting.value).strip()
+                
+                if "/+" in channel_username or "joinchat" in channel_username:
+                    logger.warning(f"⚠️ Cannot check membership for PRIVATE invite link: {channel_username}. "
+                                   f"Admin must set 'bot_channel_id' in settings. Bypassing check.")
+                    return True
+                    
+                if "t.me/" in channel_username:
+                    channel_username = channel_username.split("t.me/")[-1]
+                if not channel_username.startswith("@") and not channel_username.startswith("-100"):
+                    channel_username = f"@{channel_username}"
+                
+                chat_id_to_check = channel_username
             
             try:
-                member = await bot.get_chat_member(channel_username, user_id)
+                member = await bot.get_chat_member(chat_id_to_check, user_id)
                 return member.status in ["creator", "administrator", "member"]
             except Exception as e:
                 # If bot is not admin in the channel, or username is invalid, it throws an error
