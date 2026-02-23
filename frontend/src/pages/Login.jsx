@@ -1,11 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
 import { API_BASE } from '../api_config';
 
 const Login = ({ onLogin }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [autoLogging, setAutoLogging] = useState(false);
+
+    // Auto-login when opened inside Telegram Mini App
+    useEffect(() => {
+        const tg = window.Telegram?.WebApp;
+        if (tg && tg.initData && tg.initData.length > 0) {
+            setAutoLogging(true);
+            axios.post(`${API_BASE}/admin/telegram-login`, { init_data: tg.initData })
+                .then(res => {
+                    if (res.data.token) {
+                        localStorage.setItem('admin_token', res.data.token);
+                        tg.ready?.();
+                        onLogin();
+                    }
+                })
+                .catch(err => {
+                    setAutoLogging(false);
+                    if (err.response?.status === 403) {
+                        setError('Access denied. Only the admin can log in.');
+                    } else {
+                        // Fall back to password login
+                        setError('');
+                    }
+                });
+        }
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -16,7 +41,7 @@ const Login = ({ onLogin }) => {
                 onLogin();
             }
         } catch (err) {
-            console.error("Login Error Details:", err); // DEBUG LOG
+            console.error("Login Error Details:", err);
             if (err.response && err.response.status === 401) {
                 setError('Invalid Password. Please check.');
             } else {
@@ -24,6 +49,18 @@ const Login = ({ onLogin }) => {
             }
         }
     };
+
+    if (autoLogging) {
+        return (
+            <div className="flex items-center justify-center min-h-[100dvh] bg-black p-4">
+                <div className="bg-gray-800 p-10 rounded-3xl border border-gray-700 shadow-2xl text-center">
+                    <div className="text-4xl mb-4">🔐</div>
+                    <p className="text-white text-lg font-bold">Verifying Telegram identity...</p>
+                    <p className="text-gray-400 text-sm mt-2">Auto-logging you in</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex items-center justify-center min-h-[100dvh] bg-black p-4">

@@ -320,6 +320,62 @@ async def admin_login(request: LoginRequest):
     """Admin login - compatibility endpoint, calls main login function"""
     return await login(request)
 
+class TelegramAuthRequest(BaseModel):
+    init_data: str  # Raw initData string from window.Telegram.WebApp.initDataUnsafe
+
+@app.post("/admin/telegram-login")
+async def telegram_login(request: TelegramAuthRequest):
+    """Auto-login for Telegram Mini App - validates initData and checks admin status"""
+    import hmac, hashlib, json
+    try:
+        bot_token = os.getenv("BOT_TOKEN", "")
+        admin_telegram_id = os.getenv("ADMIN_TELEGRAM_ID", "").strip()
+        if not bot_token:
+            raise HTTPException(status_code=500, detail="Bot token not configured")
+
+        # Parse the initData string
+        from urllib.parse import parse_qs, unquote
+        params = {}
+        for part in request.init_data.split("&"):
+            if "=" in part:
+                k, v = part.split("=", 1)
+                params[k] = unquote(v)
+
+        received_hash = params.pop("hash", "")
+        if not received_hash:
+            raise HTTPException(status_code=401, detail="Missing hash in initData")
+
+        # Validate HMAC
+        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(params.items()))
+        secret_key = hmac.new(b"WebAppData", bot_token.encode(), hashlib.sha256).digest()
+        expected_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+
+        if not hmac.compare_digest(received_hash, expected_hash):
+            raise HTTPException(status_code=401, detail="Invalid initData signature")
+
+        # Parse user info
+        user_data = json.loads(params.get("user", "{}"))
+        telegram_id = str(user_data.get("id", ""))
+
+        if not telegram_id:
+            raise HTTPException(status_code=401, detail="No user info in initData")
+
+        # Check if this is the admin
+        if telegram_id != admin_telegram_id:
+            raise HTTPException(status_code=403, detail="Not authorized as admin")
+
+        # Issue token
+        admin_password = os.getenv("ADMIN_PASSWORD") or os.getenv("ADMIN_TOKEN") or "admin123"
+        token = "admin_token_" + str(hash(admin_password))
+        logger.info(f"✅ Telegram auto-login successful for admin {telegram_id}")
+        return {"token": token, "success": True}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Telegram login error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 # --- Admin API Routes ---
 
 @app.get("/admin/countries")
