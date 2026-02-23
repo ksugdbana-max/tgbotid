@@ -554,6 +554,26 @@ async def get_deposits():
         result = await session.execute(select(Deposit).order_by(Deposit.created_at.desc()))
         return result.scalars().all()
 
+from fastapi.responses import StreamingResponse
+import io
+
+@app.get("/admin/deposits/photo/{file_id}")
+async def get_deposit_photo(file_id: str):
+    """Serve Telegram photo by file_id without downloading locally"""
+    try:
+        file_info = await bot.get_file(file_id)
+        downloaded_file = await bot.download_file(file_info.file_path)
+        
+        if hasattr(downloaded_file, 'getvalue'):
+            file_bytes = downloaded_file.getvalue()
+        else:
+            downloaded_file.seek(0)
+            file_bytes = downloaded_file.read()
+            
+        return StreamingResponse(io.BytesIO(file_bytes), media_type="image/jpeg")
+    except Exception as e:
+        logger.error(f"Error serving deposit photo: {e}")
+        raise HTTPException(status_code=404, detail="Photo not found")
 
 
 @app.patch("/admin/deposits/{deposit_id}")

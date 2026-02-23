@@ -517,14 +517,6 @@ async def process_reupload_screenshot(callback: types.CallbackQuery, state: FSMC
         parse_mode="HTML"
     )
 
-from supabase import create_client, Client
-import os
-
-# Initialize Supabase Client
-url: str = os.getenv("SUPABASE_URL")
-key: str = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(url, key)
-
 @dp.callback_query(F.data == "confirm_deposit", DepositStates.confirming_screenshot)
 async def process_deposit_final_confirm(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -532,37 +524,10 @@ async def process_deposit_final_confirm(callback: types.CallbackQuery, state: FS
     utr_id = data.get("deposit_utr")
     photo_id = data.get("temp_photo_id")
     
-    # Download photo from Telegram
-    file_info = await bot.get_file(photo_id)
-    file_ext = file_info.file_path.split('.')[-1]
-    
-    # Create unique filename
-    timestamp = int(asyncio.get_event_loop().time())
-    file_name = f"deposit_{callback.from_user.id}_{timestamp}.{file_ext}"
-    
-    # Download file to memory/temp buffer
-    downloaded_file = await bot.download_file(file_info.file_path)
-    # downloaded_file is a BytesIO object. read() might handle it if seek is at 0, 
-    # but to be safe with io.BytesIO from aiogram, we use getvalue() or seek(0)
-    if hasattr(downloaded_file, 'getvalue'):
-        file_bytes = downloaded_file.getvalue()
-    else:
-        # Fallback if it's a different stream type
-        downloaded_file.seek(0)
-        file_bytes = downloaded_file.read()
-
     try:
-        # Upload to Supabase Storage
-        bucket_name = "bot-uploads"
-        # Content type is guessed by extension usually, but we can be explicit if needed
-        res = supabase.storage.from_(bucket_name).upload(
-            file_name,
-            file_bytes,
-            {"content-type": f"image/{file_ext}"}
-        )
-        
-        # Get Public URL
-        public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
+        # We store the Telegram file_id instead of uploading to a bucket.
+        # The admin panel will fetch the image via a FastAPI endpoint.
+        tg_image_path = f"tg_file_id:{photo_id}"
         
         async with async_session() as session:
             # Get user
@@ -575,9 +540,10 @@ async def process_deposit_final_confirm(callback: types.CallbackQuery, state: FS
                     user_id=user.id,
                     amount=amount,
                     upi_ref_id=utr_id,
-                    screenshot_path=public_url, # Save full URL
+                    screenshot_path=tg_image_path, # Save Telegram format
                     status="PENDING"
                 )
+
                 session.add(deposit)
                 await session.commit()
                 
@@ -602,8 +568,7 @@ async def process_deposit_final_confirm(callback: types.CallbackQuery, state: FS
                                 f"🔔 <b>New Deposit Alert!</b>\n\n"
                                 f"👤 User: {callback.from_user.full_name} (@{callback.from_user.username})\n"
                                 f"💰 Amount: ₹{amount}\n"
-                                f"🆔 UTR: {utr_id}\n"
-                                f"🖼 URL: {public_url}"
+                                f"🆔 UTR: {utr_id}"
                             ),
                             parse_mode="HTML"
                         )
@@ -613,8 +578,8 @@ async def process_deposit_final_confirm(callback: types.CallbackQuery, state: FS
                  await callback.message.edit_text("❌ User not found in database.")
                  
     except Exception as e:
-        logger.error(f"Failed to upload to Supabase: {e}")
-        await callback.message.answer(f"❌ Error uploading screenshot: {e}")
+        logger.error(f"Failed to process screenshot: {e}")
+        await callback.message.answer(f"❌ Error processing screenshot: {e}")
 
     await state.clear()
 

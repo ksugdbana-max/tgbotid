@@ -148,7 +148,9 @@ export default function DepositDetail() {
                 <div className="bg-gray-800 rounded-2xl border border-gray-700 p-6">
                     <p className="text-gray-400 mb-4">Payment Screenshot</p>
                     <img
-                        src={deposit.screenshot_path.startsWith('http') ? deposit.screenshot_path : `${API_BASE}/${deposit.screenshot_path}`}
+                        src={deposit.screenshot_path.startsWith('tg_file_id:')
+                            ? `${API_BASE}/admin/deposits/photo/${deposit.screenshot_path.split(':')[1]}`
+                            : (deposit.screenshot_path.startsWith('http') ? deposit.screenshot_path : `${API_BASE}/${deposit.screenshot_path}`)}
                         alt="Payment proof"
                         className="rounded-lg w-full max-w-2xl mx-auto"
                     />
