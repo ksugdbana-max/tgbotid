@@ -8,6 +8,7 @@ const PaymentSettings = () => {
     const [qrImage, setQrImage] = useState(null); // File object
     const [qrPreview, setQrPreview] = useState(''); // URL for preview
     const [channelLink, setChannelLink] = useState('');
+    const [logChannelId, setLogChannelId] = useState('');
     const [ownerUsername, setOwnerUsername] = useState('');
     const [exchangeRate, setExchangeRate] = useState(84.0);
     const [settings, setSettings] = useState({ bot_channel_link: '', bot_owner_username: '' });
@@ -40,6 +41,7 @@ const PaymentSettings = () => {
             setQrPreview(response.data.qr_image || '');
             setChannelLink(response.data.channel_link || '');
             setOwnerUsername(response.data.owner_username || '');
+            setLogChannelId(response.data.log_channel_id || '');
 
             // Fetch exchange rate
             try {
@@ -143,6 +145,9 @@ const PaymentSettings = () => {
         }
         if (ownerUsername && ownerUsername.trim()) {
             formData.append('owner_username', ownerUsername.trim());
+        }
+        if (logChannelId && logChannelId.trim()) {
+            formData.append('log_channel_id', logChannelId.trim());
         }
         if (qrImage) {
             formData.append('qr_image', qrImage);
@@ -298,6 +303,23 @@ const PaymentSettings = () => {
                                 />
                                 <p className="text-xs text-slate-500 mt-2">
                                     ⚠️ <strong>IMPORTANT:</strong> Enter YOUR actual Telegram username (must start with @), not "@yourusername"!
+                                </p>
+                            </div>
+
+                            {/* Log Channel ID */}
+                            <div>
+                                <label className="block text-slate-400 text-sm font-medium mb-2">
+                                    Logs Channel ID / Username
+                                </label>
+                                <input
+                                    type="text"
+                                    value={logChannelId}
+                                    onChange={(e) => setLogChannelId(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                                    placeholder="e.g. -100123456789 or @mylogschannel"
+                                />
+                                <p className="text-xs text-slate-500 mt-2">
+                                    This is where the bot will send automated purchase logs. (Make sure the bot is an admin in this channel).
                                 </p>
                             </div>
                         </div>

@@ -1027,6 +1027,55 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
         )
         logger.info(f"✅ Purchase: User {user.telegram_id} bought {account.phone_number} for ₹{country.price}")
         
+        # --- BROMO LOGS CHANNEL BROADCAST ---
+        try:
+            log_res = await session.execute(select(Settings).where(Settings.key == "log_channel_id"))
+            log_setting = log_res.scalar_one_or_none()
+            log_channel_id = str(log_setting.value).strip() if log_setting and log_setting.value else None
+            
+            if log_channel_id:
+                owner_res = await session.execute(select(Settings).where(Settings.key == "bot_owner_username"))
+                owner_setting = owner_res.scalar_one_or_none()
+                owner_username = str(owner_setting.value).strip() if owner_setting and owner_setting.value else os.getenv("BOT_OWNER_USERNAME", "")
+                
+                # Mask phone number securely
+                raw_phone = account.phone_number
+                if len(raw_phone) > 7:
+                    masked_phone = raw_phone[:4] + "****" + raw_phone[-2:]
+                else:
+                    masked_phone = raw_phone
+                
+                # Mask user ID securely
+                raw_uid = str(user.telegram_id)
+                if len(raw_uid) > 5:
+                    masked_uid = raw_uid[:2] + "***" + raw_uid[-3:]
+                else:
+                    masked_uid = raw_uid
+                
+                log_text = "🚀 <b>NEW ACCOUNT SOLD!</b>\n\n"
+                log_text += f"📁 <b>Category:</b> {country.emoji} {country.name} ({category.name})\n"
+                log_text += f"📍 <b>Region:</b> {country.emoji} {country.name}\n"
+                log_text += f"📱 <b>Number:</b> <code>{masked_phone}</code>\n"
+                log_text += f"👤 <b>User:</b> <code>{masked_uid}</code>\n"
+                log_text += "⚡ <b>Status:</b> Verified & Delivered\n"
+                
+                log_markup = None
+                if owner_username:
+                    url = f"https://t.me/{owner_username.replace('@', '')}"
+                    log_builder = InlineKeyboardBuilder()
+                    log_builder.row(InlineKeyboardButton(text="💬 Support / Buy", url=url))
+                    log_markup = log_builder.as_markup()
+                
+                await bot.send_message(
+                    chat_id=log_channel_id,
+                    text=log_text,
+                    reply_markup=log_markup,
+                    parse_mode="HTML"
+                )
+        except Exception as log_err:
+            logger.error(f"Failed to send broadcast log to channel: {log_err}")
+        # ------------------------------------
+        
     except Exception as e:
         logger.error(f"❌ Purchase error: {e}", exc_info=True)
         await callback.message.answer(

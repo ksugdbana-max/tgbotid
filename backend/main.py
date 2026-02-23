@@ -478,17 +478,20 @@ async def get_payment_settings():
         qr_res = await session.execute(select(Settings).where(Settings.key == "payment_qr_image"))
         channel_res = await session.execute(select(Settings).where(Settings.key == "bot_channel_link"))
         owner_res = await session.execute(select(Settings).where(Settings.key == "bot_owner_username"))
+        log_res = await session.execute(select(Settings).where(Settings.key == "log_channel_id"))
         
         upi_id = upi_res.scalar_one_or_none()
         qr_image = qr_res.scalar_one_or_none()
         channel_link = channel_res.scalar_one_or_none()
         owner_username = owner_res.scalar_one_or_none()
+        log_channel_id = log_res.scalar_one_or_none()
         
         return {
             "upi_id": upi_id.value if upi_id else "",
             "qr_image": qr_image.value if qr_image else "",
             "channel_link": channel_link.value if channel_link else "",
-            "owner_username": owner_username.value if owner_username else ""
+            "owner_username": owner_username.value if owner_username else "",
+            "log_channel_id": log_channel_id.value if log_channel_id else ""
         }
 
 @app.post("/admin/settings/payment")
@@ -496,7 +499,8 @@ async def update_payment_settings(
     upi_id: str = Form(""),
     qr_image: UploadFile = File(None),
     channel_link: str = Form(""),
-    owner_username: str = Form("")
+    owner_username: str = Form(""),
+    log_channel_id: str = Form("")
 ):
     """Update payment settings and bot configuration"""
     async with async_session() as session:
@@ -529,6 +533,16 @@ async def update_payment_settings(
             owner_setting.value = owner_username
         else:
             session.add(Settings(key="bot_owner_username", value=owner_username))
+            
+        # Update or create log channel ID
+        log_stmt = select(Settings).where(Settings.key == "log_channel_id")
+        log_res = await session.execute(log_stmt)
+        log_setting = log_res.scalar_one_or_none()
+        
+        if log_setting:
+            log_setting.value = log_channel_id
+        else:
+            session.add(Settings(key="log_channel_id", value=log_channel_id))
         
         # Handle QR image upload if provided
         if qr_image and qr_image.filename:
