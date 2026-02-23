@@ -102,14 +102,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Add CORS Middleware to allow Vercel frontend access
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
-allow_all = "*" in allowed_origins
-
+# Add CORS Middleware - allow all origins (auth is token-based, not cookie-based)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=not allow_all,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
