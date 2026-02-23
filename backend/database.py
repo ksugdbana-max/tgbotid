@@ -17,17 +17,22 @@ if not DB_URL:
 if "postgresql" in DB_URL and "asyncpg" not in DB_URL:
     DB_URL = DB_URL.replace("postgresql://", "postgresql+asyncpg://")
 
-# CRITICAL: Increased pool size and added recycling for bot + admin panel stability
-# This prevents connection exhaustion when both bot and admin panel are active
-engine = create_async_engine(
-    DB_URL, 
-    echo=True,
-    pool_size=40,          # Increased to 40 to handle bot + admin panel concurrently
-    max_overflow=20,       # Allow up to 20 additional connections (60 total)
-    pool_pre_ping=True,    # Verify connections before using them
-    pool_recycle=3600,     # Recycle connections every hour to prevent stale connections
-    pool_timeout=15        # Increased timeout to 15 seconds for high load scenarios
-)
+# Engine options
+engine_kwargs = {
+    "echo": True
+}
+
+# Only add pooling arguments for PostgreSQL (SQLite doesn't support them)
+if "postgresql" in DB_URL:
+    engine_kwargs.update({
+        "pool_size": 40,
+        "max_overflow": 20,
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+        "pool_timeout": 15
+    })
+
+engine = create_async_engine(DB_URL, **engine_kwargs)
 async_session = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 async def init_db():
