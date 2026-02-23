@@ -796,9 +796,6 @@ async def process_accounts(callback: types.CallbackQuery):
             Country.name,
             Country.emoji,
             Country.price,
-            func.count(Account.id).label('stock')
-            Country.emoji,
-            Country.price,
             Country.price_usd,
             func.count(Account.id).label('stock')
         ).outerjoin(
