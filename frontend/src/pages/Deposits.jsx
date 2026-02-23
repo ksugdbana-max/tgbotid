@@ -17,7 +17,7 @@ export default function Deposits() {
 
     const fetchDeposits = async () => {
         try {
-            const token = localStorage.getItem('adminToken');
+            const token = localStorage.getItem('admin_token');
             const { data } = await axios.get(`${API_BASE}/admin/deposits/enhanced`, {
                 headers: { Authorization: `Bearer ${token}` }
             });

@@ -17,7 +17,7 @@ export default function DepositDetail() {
 
     const fetchDeposit = async () => {
         try {
-            const token = localStorage.getItem('adminToken');
+            const token = localStorage.getItem('admin_token');
             const { data } = await axios.get(`${API_BASE}/admin/deposits/enhanced`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -32,7 +32,7 @@ export default function DepositDetail() {
 
     const handleApprove = async () => {
         try {
-            const token = localStorage.getItem('adminToken');
+            const token = localStorage.getItem('admin_token');
             await axios.patch(
                 `${API_BASE}/admin/deposits/${id}`,
                 { status: 'APPROVED' },
@@ -46,7 +46,7 @@ export default function DepositDetail() {
 
     const handleReject = async () => {
         try {
-            const token = localStorage.getItem('adminToken');
+            const token = localStorage.getItem('admin_token');
             await axios.patch(
                 `${API_BASE}/admin/deposits/${id}`,
                 { status: 'REJECTED' },
