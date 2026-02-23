@@ -146,17 +146,32 @@ async def check_channel_membership(user_id: int) -> bool:
             if not setting or not setting.value or not str(setting.value).strip():
                 return True  # No channel configured
             
-            channel_username = setting.value
+            channel_username = str(setting.value).strip()
+            
+            # If it's a private invite link (e.g. t.me/+... or t.me/joinchat/...)
+            # bot.get_chat_member() CANNOT work with an invite hash.
+            # It requires the numeric Chat ID (-100...) or public @username.
+            if "/+" in channel_username or "joinchat" in channel_username:
+                logger.warning(f"⚠️ Cannot check membership for PRIVATE invite link: {channel_username}. "
+                               f"Admin must use public @username or configure a numeric Chat ID. Bypassing check.")
+                return True
+                
             if "t.me/" in channel_username:
                 channel_username = channel_username.split("t.me/")[-1]
-            if not channel_username.startswith("@"):
+            if not channel_username.startswith("@") and not channel_username.startswith("-100"):
                 channel_username = f"@{channel_username}"
             
             try:
                 member = await bot.get_chat_member(channel_username, user_id)
                 return member.status in ["creator", "administrator", "member"]
-            except:
-                return True  # Fail open on error
+            except Exception as e:
+                # If bot is not admin in the channel, or username is invalid, it throws an error
+                logger.error(f"Failed to check membership for {channel_username}: {e}. Ensure bot is Admin in the channel!")
+                # Default to False to actually block access if the check fails due to bot not being admin
+                # Wait, if we return False, we lock the user out completely if admin makes a mistake.
+                # The user requested "force join is not working". This means it was returning True too often.
+                # Let's change this to False so it ACTUALLY acts as a force join when configured.
+                return False
                 
     except Exception as e:
         logger.error(f"Error in check_channel_membership: {e}")
