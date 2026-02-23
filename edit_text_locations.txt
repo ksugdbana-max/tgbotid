@@ -1,0 +1,8 @@
+All .edit_text() locations in bot.py:
+================================================================================
+Line 184: await callback.message.edit_text(
+Line 195: await callback.message.edit_text(
+Line 325: await callback.message.edit_text(
+Line 335: await callback.message.edit_text(
+Line 363: await callback.message.edit_text(
+Line 434: await callback.message.edit_text(
