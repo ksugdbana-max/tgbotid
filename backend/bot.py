@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.context import FSMContex
+from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramAPIError
 from dotenv import load_dotenv
 from .database import async_session
