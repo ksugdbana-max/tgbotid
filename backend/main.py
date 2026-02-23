@@ -61,9 +61,14 @@ async def lifespan(app: FastAPI):
         
         if not base_url:
             print("❌ ERROR: BASE_WEBHOOK_URL environment variable not set!", flush=True)
-            print("   Set it on Koyeb to your app URL", flush=True)
+            print("   Set it on Railway to your app URL (e.g., https://your-app.up.railway.app)", flush=True)
         else:
-            webhook_url = f"{base_url.rstrip('/')}{WEBHOOK_PATH}"
+            # Smart URL construction: don't double append /webhook
+            if base_url.endswith("/webhook"):
+                webhook_url = base_url
+            else:
+                webhook_url = f"{base_url.rstrip('/')}/webhook"
+            
             print(f"🔄 Setting webhook to: {webhook_url}", flush=True)
             
             await bot.set_webhook(
@@ -147,7 +152,12 @@ async def fix_webhook_endpoint():
             logger.error("❌ BASE_WEBHOOK_URL not set in environment!")
             return {"success": False, "error": "BASE_WEBHOOK_URL not configured"}
         
-        webhook_url = f"{base_url.rstrip('/')}/webhook"
+        # Smart URL construction
+        if base_url.endswith("/webhook"):
+            webhook_url = base_url
+        else:
+            webhook_url = f"{base_url.rstrip('/')}/webhook"
+            
         logger.info(f"🔧 Admin requested webhook fix to: {webhook_url}")
         
         async with aiohttp.ClientSession() as session:
