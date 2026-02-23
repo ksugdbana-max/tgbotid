@@ -201,8 +201,11 @@ def get_session_generator():
     return _session_generator
 
 async def get_session_generator_async():
-    """Get session generator, refreshing credentials from DB if needed."""
+    """Get the global session generator, refreshing credentials from DB if needed.
+    IMPORTANT: always returns the same singleton so active_clients is preserved."""
+    global _session_generator
     import os
+    # Try to update credentials from DB
     try:
         from .database import async_session
         from sqlalchemy import select
@@ -212,14 +215,22 @@ async def get_session_generator_async():
             api_hash_res = await session.execute(select(Settings).where(Settings.key == "telegram_api_hash"))
             api_id_setting = api_id_res.scalar_one_or_none()
             api_hash_setting = api_hash_res.scalar_one_or_none()
-            db_api_id = api_id_setting.value if api_id_setting else None
-            db_api_hash = api_hash_setting.value if api_hash_setting else None
-            if db_api_id:
-                os.environ["TELEGRAM_API_ID"] = db_api_id
-            if db_api_hash:
-                os.environ["TELEGRAM_API_HASH"] = db_api_hash
+            if api_id_setting:
+                os.environ["TELEGRAM_API_ID"] = api_id_setting.value
+            if api_hash_setting:
+                os.environ["TELEGRAM_API_HASH"] = api_hash_setting.value
     except Exception:
-        pass
+        pass  # Fall back to env vars
+
     api_id = int(os.getenv("TELEGRAM_API_ID", 0))
     api_hash = os.getenv("TELEGRAM_API_HASH", "")
-    return SessionGeneratorService(api_id, api_hash)
+
+    if _session_generator is None:
+        # First time: create the singleton
+        _session_generator = SessionGeneratorService(api_id, api_hash)
+    else:
+        # Update credentials in-place without losing active_clients
+        _session_generator.api_id = api_id
+        _session_generator.api_hash = api_hash
+
+    return _session_generator
