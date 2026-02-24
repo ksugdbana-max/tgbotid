@@ -264,10 +264,8 @@ const Countries = () => {
 
     const handleUpdatePrice = async (id) => {
         await axios.put(`${API_BASE}/admin/countries/${id}`, {
-            update_data: {
-                price: parseFloat(editPrice) || 0,
-                price_usd: parseFloat(editPriceUsd) || 0,
-            }
+            price: parseFloat(editPrice) || 0,
+            price_usd: parseFloat(editPriceUsd) || 0,
         });
         setEditingId(null);
         fetchCountries();

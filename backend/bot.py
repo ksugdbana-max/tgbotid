@@ -1038,6 +1038,7 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
         
         builder = InlineKeyboardBuilder()
         builder.row(InlineKeyboardButton(text="📲 Get OTP Code", callback_data=f"get_otp_{purchase.id}"))
+        builder.row(InlineKeyboardButton(text="🚪 Logout from Bot", callback_data=f"logout_sess_{purchase.id}"))
         builder.row(InlineKeyboardButton(text="📱 Manage Devices", callback_data=f"manage_sess_{purchase.id}"))
         builder.row(InlineKeyboardButton(text="📜 My Purchases", callback_data="btn_purchases"))
         builder.row(InlineKeyboardButton(text="🛒 Buy More", callback_data="btn_accounts"))
@@ -1790,6 +1791,64 @@ async def handle_check_login(callback: types.CallbackQuery):
         
         await callback.answer("Checking login status...")
         await show_otp_waiting(callback.message, account.phone_number, purchase_id)
+
+# Handler for logging out the account session permanently
+@dp.callback_query(F.data.startswith("logout_sess_"))
+async def process_logout_session(callback: types.CallbackQuery):
+    """Log out the session string permanently from Telegram."""
+    purchase_id = int(callback.data.split("_")[2])
+    
+    await callback.answer("Logging out... Please wait.", show_alert=False)
+    
+    async with async_session() as session:
+        purchase_stmt = select(Purchase).where(Purchase.id == purchase_id)
+        purchase_res = await session.execute(purchase_stmt)
+        purchase = purchase_res.scalar_one_or_none()
+        
+        if not purchase:
+            await callback.message.answer("❌ Error: Purchase not found.")
+            return
+            
+        account_stmt = select(Account).where(Account.id == purchase.account_id)
+        account_res = await session.execute(account_stmt)
+        account = account_res.scalar_one_or_none()
+        
+        if not account or not account.session_data:
+            await callback.message.answer("❌ Error: Account session not found.")
+            return
+
+        session_string = account.session_data
+        phone_number = account.phone_number
+
+        # Stop monitoring first if active
+        session_mgr = await get_session_manager_async()
+        await session_mgr.stop_monitoring(phone_number)
+        
+        # Display a temporary loading message
+        progress_msg = await callback.message.answer(f"⏳ Terminating telegram session for <code>{phone_number}</code>...", parse_mode="HTML")
+        
+        # Terminate it
+        success = await session_mgr.terminate_session_string(session_string)
+        
+        try:
+            await progress_msg.delete()
+        except:
+            pass
+
+        if success:
+            await callback.message.answer(
+                f"✅ <b>Successfully Logged Out!</b>\n\n"
+                f"The account <code>{phone_number}</code> has been fully logged out from the bot and the Telegram servers.\n"
+                f"The session is now completely destroyed.",
+                parse_mode="HTML"
+            )
+        else:
+            await callback.message.answer(
+                f"⚠️ <b>Logout Attempt Failed</b>\n\n"
+                f"We couldn't terminate the session for <code>{phone_number}</code>.\n"
+                f"The session might already be dead, or the API keys are invalid.",
+                parse_mode="HTML"
+            )
 
 # --- Device Management Handlers ---
 

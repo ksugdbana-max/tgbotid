@@ -340,7 +340,34 @@ class TelegramSessionManager:
                 "status": "ERROR",
                 "message": str(e)
             }
-    
+            
+    async def terminate_session_string(self, session_string: str) -> bool:
+        """
+        Takes a raw Pyrogram session string and permanently logs it out from Telegram.
+        Used when a buyer clicks the 'Logout from Bot' button after purchasing an account.
+        """
+        try:
+            import random
+            import string
+            from pyrogram import Client
+
+            random_name = f"logout_{''.join(random.choices(string.ascii_letters, k=8))}"
+            temp_client = Client(
+                name=random_name,
+                api_id=self.api_id,
+                api_hash=str(self.api_hash),
+                session_string=session_string,
+                in_memory=True
+            )
+            
+            await temp_client.start()
+            await temp_client.log_out() # Permanently destroys the session
+            print(f"✅ Successfully terminated session string.")
+            return True
+        except Exception as e:
+            print(f"❌ Error terminating session: {e}")
+            return False
+            
     def get_active_sessions_count(self) -> int:
         """Get count of currently active monitoring sessions"""
         return len(self.active_clients)
