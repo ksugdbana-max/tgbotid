@@ -1060,10 +1060,15 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
             
             if log_channel_id:
                 # Ensure the log channel ID is formatted correctly for Telegram API
-                if "t.me/" in log_channel_id:
-                    log_channel_id = log_channel_id.split("t.me/")[-1]
-                if not log_channel_id.startswith("@") and not log_channel_id.startswith("-100"):
-                    log_channel_id = f"@{log_channel_id}"
+                if "t.me/" in str(log_channel_id):
+                    log_channel_id = str(log_channel_id).split("t.me/")[-1]
+                
+                # Convert numeric IDs to int, otherwise prepend @
+                log_channel_str = str(log_channel_id).strip()
+                if log_channel_str.lstrip('-').isdigit():
+                    log_channel_id = int(log_channel_str)
+                elif not log_channel_str.startswith("@"):
+                    log_channel_id = f"@{log_channel_str}"
 
                 owner_res = await session.execute(select(Settings).where(Settings.key == "bot_owner_username"))
                 owner_setting = owner_res.scalar_one_or_none()
@@ -1550,6 +1555,7 @@ async def show_otp_waiting(message: types.Message, phone_number: str, purchase_i
             f"• Follow Telegram's Terms of Service\n\n"
             f"✨ <b>Enjoy your new Telegram account!</b>",
             reply_markup=InlineKeyboardBuilder()
+                .row(InlineKeyboardButton(text="🚪 Logout from Bot", callback_data=f"logout_sess_{purchase_id}"))
                 .row(InlineKeyboardButton(text="🛠️ Manage Sessions", callback_data=f"manage_sess_{purchase_id}"))
                 .row(InlineKeyboardButton(text="🏠 Main Menu", callback_data="btn_main_menu"))
                 .row(InlineKeyboardButton(text="🛍️ Buy More", callback_data="btn_accounts"))
