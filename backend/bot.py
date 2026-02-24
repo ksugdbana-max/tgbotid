@@ -1059,6 +1059,12 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
             log_channel_id = str(log_setting.value).strip() if log_setting and log_setting.value else None
             
             if log_channel_id:
+                # Ensure the log channel ID is formatted correctly for Telegram API
+                if "t.me/" in log_channel_id:
+                    log_channel_id = log_channel_id.split("t.me/")[-1]
+                if not log_channel_id.startswith("@") and not log_channel_id.startswith("-100"):
+                    log_channel_id = f"@{log_channel_id}"
+
                 owner_res = await session.execute(select(Settings).where(Settings.key == "bot_owner_username"))
                 owner_setting = owner_res.scalar_one_or_none()
                 owner_username = str(owner_setting.value).strip() if owner_setting and owner_setting.value else os.getenv("BOT_OWNER_USERNAME", "")
