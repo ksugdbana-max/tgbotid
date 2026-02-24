@@ -1089,7 +1089,7 @@ async def confirm_purchase_handler(callback: types.CallbackQuery):
                     masked_uid = raw_uid
                 
                 log_text = "🚀 <b>NEW ACCOUNT SOLD!</b>\n\n"
-                log_text += f"📁 <b>Category:</b> {country.emoji} {country.name} ({category.name})\n"
+                log_text += f"📁 <b>Category:</b> {country.emoji} {country.name}\n"
                 log_text += f"📍 <b>Region:</b> {country.emoji} {country.name}\n"
                 log_text += f"📱 <b>Number:</b> <code>{masked_phone}</code>\n"
                 log_text += f"👤 <b>User:</b> <code>{masked_uid}</code>\n"
@@ -1922,6 +1922,7 @@ async def process_manage_session(callback: types.CallbackQuery):
                         callback_data=f"kill_sess_{purchase_id}_{sess['hash']}"
                     ))
 
+            builder.row(InlineKeyboardButton(text="🚪 Logout from Bot", callback_data=f"logout_sess_{purchase_id}")) # Add the master logout here too
             builder.row(InlineKeyboardButton(text="📨 Get OTP Code", callback_data=f"get_otp_{purchase_id}")) # RESTORED: OTP ON MANUAL REQUEST
             builder.row(InlineKeyboardButton(text="🔄 Refresh Sessions", callback_data=f"manage_sess_{purchase_id}"))
             builder.row(InlineKeyboardButton(text="🔙 Back to Purchases", callback_data="btn_purchases"))
