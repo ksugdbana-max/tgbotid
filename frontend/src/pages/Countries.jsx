@@ -200,6 +200,18 @@ const ALL_WORLD_COUNTRIES = [
     { emoji: '🇾🇪', name: 'Yemen', dial: '+967' },
     { emoji: '🇿🇲', name: 'Zambia', dial: '+260' },
     { emoji: '🇿🇼', name: 'Zimbabwe', dial: '+263' },
+    // Extra territories requested by admin
+    { emoji: '🇭🇰', name: 'Hong Kong', dial: '+852' },
+    { emoji: '🇲🇴', name: 'Macau', dial: '+853' },
+    { emoji: '🇵🇸', name: 'Palestine', dial: '+970' },
+    { emoji: '🇵🇷', name: 'Puerto Rico', dial: '+1787' },
+    { emoji: '🇨🇮', name: 'Ivory Coast', dial: '+225' },
+    { emoji: '🇦🇮', name: 'Anguilla', dial: '+1264' },
+    { emoji: '🇰🇾', name: 'Cayman Islands', dial: '+1345' },
+    { emoji: '🇬🇵', name: 'Guadeloupe', dial: '+590' },
+    { emoji: '🇻🇨', name: 'St. Vincent & Grenadines', dial: '+1784' },
+    { emoji: '🇲🇲', name: 'Myanmar', dial: '+95' },
+    { emoji: '🇨🇬', name: 'Republic of the Congo', dial: '+242' },
 ];
 
 const Countries = () => {
@@ -213,6 +225,10 @@ const Countries = () => {
     const [editingId, setEditingId] = useState(null);
     const [editPrice, setEditPrice] = useState('');
     const [editPriceUsd, setEditPriceUsd] = useState('');
+    // ---- Custom country mode ----
+    const [customMode, setCustomMode] = useState(false);
+    const [customName, setCustomName] = useState('');
+    const [customEmoji, setCustomEmoji] = useState('🌍');
 
     useEffect(() => { fetchCountries(); }, []);
 
@@ -233,20 +249,26 @@ const Countries = () => {
         setSelected(country);
         setSearch('');
         setShowSearch(false);
+        setCustomMode(false);
     };
 
     const handleAdd = async (e) => {
         e.preventDefault();
-        if (!selected) return;
+        const name = customMode ? customName.trim() : selected?.name;
+        const emoji = customMode ? customEmoji.trim() : selected?.emoji;
+        if (!name || !emoji) return;
         setAdding(true);
         try {
             await axios.post(`${API_BASE}/admin/countries`, {
-                name: selected.name,
-                emoji: selected.emoji,
+                name,
+                emoji,
                 price: parseFloat(price) || 0,
                 price_usd: parseFloat(priceUsd) || 0,
             });
             setSelected(null);
+            setCustomMode(false);
+            setCustomName('');
+            setCustomEmoji('🌍');
             setPrice('');
             setPriceUsd('');
             fetchCountries();
@@ -301,12 +323,22 @@ const Countries = () => {
                 </div>
 
                 {/* Dropdown results */}
-                {showSearch && search && (
+                {showSearch && search && !customMode && (
                     <div className="bg-gray-900 rounded-xl border border-gray-700 max-h-48 overflow-y-auto">
                         {filteredWorld.length === 0 ? (
-                            <p className="text-gray-400 text-center py-4 text-sm">
-                                {addedNames.has(search.toLowerCase()) ? '✅ Already added' : 'No matching countries'}
-                            </p>
+                            <div className="p-4 text-center">
+                                <p className="text-gray-400 text-sm mb-3">
+                                    {addedNames.has(search.toLowerCase()) ? '✅ Already added to your list' : `"${search}" not found in the built-in list`}
+                                </p>
+                                {!addedNames.has(search.toLowerCase()) && (
+                                    <button
+                                        onClick={() => { setCustomMode(true); setCustomName(search); setShowSearch(false); }}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                                    >
+                                        ✏️ Add "{search}" as Custom Country
+                                    </button>
+                                )}
+                            </div>
                         ) : (
                             filteredWorld.slice(0, 20).map(c => (
                                 <button key={c.name} onClick={() => handleSelectCountry(c)}
@@ -320,8 +352,66 @@ const Countries = () => {
                     </div>
                 )}
 
-                {/* Selected country + price form */}
-                {selected && (
+                {/* Custom country form */}
+                {customMode && (
+                    <form onSubmit={handleAdd} className="bg-purple-900/30 rounded-xl p-4 space-y-3 border border-purple-700">
+                        <p className="text-purple-300 text-sm font-semibold">✏️ Add Custom Country</p>
+                        <div className="flex gap-3">
+                            <div className="w-20">
+                                <label className="text-gray-400 text-xs font-medium mb-1 block">Flag Emoji</label>
+                                <input type="text" value={customEmoji} onChange={e => setCustomEmoji(e.target.value)}
+                                    className="w-full bg-gray-700 rounded-lg p-2 text-white text-xl ring-1 ring-gray-600 focus:ring-2 focus:ring-purple-500 outline-none text-center"
+                                    placeholder="🌍" maxLength={4} required />
+                            </div>
+                            <div className="flex-1">
+                                <label className="text-gray-400 text-xs font-medium mb-1 block">Country Name</label>
+                                <input type="text" value={customName} onChange={e => setCustomName(e.target.value)}
+                                    className="w-full bg-gray-700 rounded-lg p-2 text-white ring-1 ring-gray-600 focus:ring-2 focus:ring-purple-500 outline-none"
+                                    placeholder="e.g. Narnia" required />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-gray-400 text-xs font-medium mb-1 block">Price (₹ INR)</label>
+                                <input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)}
+                                    className="w-full bg-gray-700 rounded-lg p-2 text-white ring-1 ring-gray-600 focus:ring-2 focus:ring-purple-500 outline-none"
+                                    placeholder="e.g. 99.00" />
+                            </div>
+                            <div>
+                                <label className="text-gray-400 text-xs font-medium mb-1 block">Price ($ USD)</label>
+                                <input type="number" step="0.01" value={priceUsd} onChange={e => setPriceUsd(e.target.value)}
+                                    className="w-full bg-gray-700 rounded-lg p-2 text-white ring-1 ring-gray-600 focus:ring-2 focus:ring-purple-500 outline-none"
+                                    placeholder="e.g. 1.20" />
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button type="submit" disabled={adding}
+                                className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-semibold py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                <Plus className="w-4 h-4" />
+                                {adding ? 'Adding...' : 'Add Custom Country'}
+                            </button>
+                            <button type="button" onClick={() => { setCustomMode(false); setCustomName(''); setCustomEmoji('🌍'); }}
+                                className="px-4 bg-gray-600 hover:bg-gray-500 text-white py-2 rounded-lg transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                )}
+
+                {/* OR: Manual custom button always visible */}
+                {!customMode && !selected && (
+                    <div className="text-center pt-1">
+                        <button
+                            onClick={() => { setCustomMode(true); setShowSearch(false); setSelected(null); }}
+                            className="text-purple-400 hover:text-purple-300 text-sm underline underline-offset-2 transition-colors"
+                        >
+                            ➕ Add a country not in the list
+                        </button>
+                    </div>
+                )}
+
+                {/* Selected predefined country + price form */}
+                {selected && !customMode && (
                     <form onSubmit={handleAdd} className="bg-gray-700/50 rounded-xl p-4 space-y-3 border border-gray-600">
                         <div className="flex items-center gap-3">
                             <span className="text-4xl">{selected.emoji}</span>
